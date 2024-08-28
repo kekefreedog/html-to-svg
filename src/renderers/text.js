@@ -27,6 +27,8 @@ export default ({ debug, fonts }) => async (string, { x, y, width, height, style
   // Convert the font file to Base64
   const fontBase64 = fontToBase64(path.join(__dirname, font.url))
 
+  console.log(font)
+
   // Create a <style> element to embed the font in the SVG
   const styleElement = $('style', {}, g)
   styleElement.textContent = `
