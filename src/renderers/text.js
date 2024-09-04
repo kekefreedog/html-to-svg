@@ -1,12 +1,4 @@
 import $ from '../utils/dom-render-svg'
-import fs from 'fs'
-import path from 'path'
-
-// Utility function to convert a font file to a Base64 string
-const fontToBase64 = (filePath) => {
-  const fontBuffer = fs.readFileSync(filePath)
-  return fontBuffer.toString('base64')
-}
 
 const matchFont = s => ({ family, style = 'normal', weight = '400' } = {}) =>
   family === (s.getPropertyValue('font-family') ?? '').replace(/['"]/g, '') &&
@@ -20,45 +12,58 @@ export default ({ debug, fonts }) => async (string, { x, y, width, height, style
 
   const g = $('g', { class: 'text-fragment' })
 
-  // Find the font
+  // Find font
   const font = fonts.find(matchFont(style))
   if (!font) throw new Error(`Cannot find font '${style.getPropertyValue('font-family')} ${style.getPropertyValue('font-style')} ${style.getPropertyValue('font-weight')}'`)
 
-  // Convert the font file to Base64
-  const fontBase64 = fontToBase64(path.join(__dirname, font.url))
+  // Extract font metrics
+  const { unitsPerEm } = font.opentype
+  const ascender = font.opentype.tables.hhea.ascender
+  const descender = font.opentype.tables.hhea.descender
 
-  console.log(font)
-
-  // Create a <style> element to embed the font in the SVG
-  const styleElement = $('style', {}, g)
-  styleElement.textContent = `
-    @font-face {
-      font-family: '${font.family}';
-      src: url(data:font/ttf;base64,${fontBase64}) format('truetype');
-      font-weight: ${font.weight};
-      font-style: ${font.style};
-    }
-  `
-
-  // Extract CSS properties
+  // Extract CSS props
   const letterSpacing = style.getPropertyValue('letter-spacing')
-  const fontSize = style.getPropertyValue('font-size')
+  const fontSize = parseFloat(style.getPropertyValue('font-size'))
   const fill = style.getPropertyValue('color')
 
-  // Create a <text> element to render the text
+  // Compute metrics
+  const lineBox = (ascender - descender) / unitsPerEm
+  const leading = (fontSize * lineBox) - Math.abs(descender / unitsPerEm) * fontSize
+
+  // Render various metrics for debug
+  line('start', 0, { orientation: 'vertical', stroke: 'red' })
+  line('end', width, { orientation: 'vertical', stroke: 'red' })
+  line('leading', leading, { stroke: '#4b96ff' })
+
+  // Extract CSS props
+
+  // Create a <text> element instead of vectorizing the text
   const textElement = $('text', {
     x: x,
-    y: y,
+    y: y + leading,
     fill: fill,
-    'font-family': font.family,
+    'font-family': style.getPropertyValue('font-family').replace(/['"]/g, ''), // Remove quotes
     'font-size': fontSize,
     'font-weight': style.getPropertyValue('font-weight'),
     'font-style': style.getPropertyValue('font-style'),
     'letter-spacing': letterSpacing === 'normal' ? '0' : letterSpacing,
-    'dominant-baseline': 'hanging'
+    'dominant-baseline': 'auto' // Adjust to align text correctly
   }, g)
 
   textElement.textContent = string
 
   return g
+
+  function line (title, v, { orientation = 'horizontal', stroke = 'black' } = {}) {
+    return debug && $('line', {
+      title,
+      'data-value': v,
+      x1: orientation === 'horizontal' ? x : x + v,
+      x2: orientation === 'horizontal' ? x + width : x + v,
+      y1: orientation === 'horizontal' ? y + v : y,
+      y2: orientation === 'horizontal' ? y + v : y + height,
+      stroke,
+      class: 'debug'
+    }, g)
+  }
 }

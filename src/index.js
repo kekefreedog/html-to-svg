@@ -8,7 +8,7 @@ import $ from './utils/dom-render-svg'
 import * as RENDERERS from './renderers'
 
 export default function ({
-  debug = false,
+  debug = true,
   ignore = '',
   fonts = []
 } = {}) {

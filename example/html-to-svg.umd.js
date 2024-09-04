@@ -15059,8 +15059,6 @@
         width = _ref3.width,
         height = _ref3.height,
         style = _ref3.style;
-      var _ref4$splitText = _ref4.splitText,
-        splitText = _ref4$splitText === void 0 ? false : _ref4$splitText;
       try {
         var line = function line(title, v, _temp2) {
           var _ref5 = _temp2 === void 0 ? {} : _temp2,
@@ -15096,6 +15094,7 @@
         // Extract CSS props
         var letterSpacing = style.getPropertyValue('letter-spacing');
         var fontSize = parseFloat(style.getPropertyValue('font-size'));
+        var fill = style.getPropertyValue('color');
 
         // Compute metrics
         var lineBox = (ascender - descender) / unitsPerEm;
@@ -15113,34 +15112,23 @@
         line('leading', leading, {
           stroke: '#4b96ff'
         });
-        if (letterSpacing !== 'normal' || splitText) {
-          var ls = letterSpacing === 'normal' ? 0 : parseFloat(letterSpacing);
 
-          // Render letter by letter in case of non-default letter-spacing or explicit split
-          for (var _iterator = _createForOfIteratorHelperLoose(string), _step; !(_step = _iterator()).done;) {
-            var c = _step.value;
-            if (!c.match(/\s/)) {
-              // Do not render spaces
-              $('path', {
-                d: font.opentype.getPath(c, x, y + leading, fontSize).toPathData(3),
-                fill: style.getPropertyValue('color')
-              }, g);
-            }
-            x += font.opentype.getAdvanceWidth(c, fontSize) + ls;
-          }
-        } else {
-          // Render string
-          $('path', {
-            d: font.opentype.getPath(string, x, y + leading, fontSize, {
-              features: {
-                // TODO extract from CSS props
-                liga: true,
-                rlig: true
-              }
-            }).toPathData(3),
-            fill: style.getPropertyValue('color')
-          }, g);
-        }
+        // Extract CSS props
+
+        // Create a <text> element instead of vectorizing the text
+        var textElement = $('text', {
+          x: x,
+          y: y + leading,
+          fill: fill,
+          'font-family': "Helvetica",
+          // style.getPropertyValue('font-family').replace(/['"]/g, '').replace('Open Sans', 'Helvetica'), // Remove quotes
+          'font-size': fontSize,
+          'font-weight': style.getPropertyValue('font-weight'),
+          'font-style': style.getPropertyValue('font-style'),
+          'letter-spacing': letterSpacing === 'normal' ? '0' : letterSpacing,
+          'dominant-baseline': 'auto' // Adjust to align text correctly
+        }, g);
+        textElement.textContent = string;
         return Promise.resolve(g);
       } catch (e) {
         return Promise.reject(e);
@@ -15327,7 +15315,7 @@
   function index (_temp) {
     var _ref = _temp === void 0 ? {} : _temp,
       _ref$debug = _ref.debug,
-      debug = _ref$debug === void 0 ? false : _ref$debug,
+      debug = _ref$debug === void 0 ? true : _ref$debug,
       _ref$ignore = _ref.ignore,
       ignore = _ref$ignore === void 0 ? '' : _ref$ignore,
       _ref$fonts = _ref.fonts,
